@@ -8,10 +8,12 @@ from app.utils import is_rate_limited, format_message
 import logging
 import asyncio
 from contextlib import asynccontextmanager
+from aiogram.types import Update
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -34,7 +36,9 @@ async def root(request: Request):
 # --- Webhook endpoint for Telegram updates ---
 @app.post("/webhook/{bot_id}")
 async def telegram_webhook(request: Request, bot_id: str):
-    update = await request.json()
+    update_json = await request.json()
+    logger.info(f"Incoming Telegram update: {update_json}")
+    update = Update(**update_json)
     await dp.feed_update(bot, update)
     return {"status": "ok"}
 
