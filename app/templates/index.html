@@ -124,11 +124,24 @@
             font-weight: 800;
             letter-spacing: -0.04em;
             margin-bottom: 0.75rem;
-            color: var(--text-primary);
+
+            background: linear-gradient(
+                135deg,
+                #f8fafc 0%,
+                #d1fae5 35%,
+                #34d399 55%,
+                #a7f3d0 75%,
+                #ffffff 100%
+            );
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+
             text-shadow:
-                0 0 25px rgba(16, 185, 129, 0.15),
-                0 0 60px rgba(16, 185, 129, 0.08);
+                0 0 30px rgba(16, 185, 129, 0.18),
+                0 0 80px rgba(16, 185, 129, 0.08);
         }
+
 
         h1 {
             font-size: clamp(2.3rem, 5.5vw, 3.5rem);
