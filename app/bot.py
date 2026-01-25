@@ -29,7 +29,7 @@ async def cmd_start(message: types.Message):
         return
 
     api_key = user["api_key"]
-    webhook_url = f"{settings.BASE_URL.rstrip('/')}/send/{api_key}"
+    webhook_url = f"{settings.BASE_URL.rstrip('/')}/v1/user/send/{api_key}"
 
     await message.answer(
         "👋 <b>Welcome to PingHook!</b>\n\n"
