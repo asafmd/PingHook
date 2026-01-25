@@ -32,9 +32,29 @@ async def cmd_start(message: types.Message):
     webhook_url = f"{settings.BASE_URL.rstrip('/')}/v1/user/send/{api_key}"
 
     await message.answer(
-        "👋 <b>Welcome to PingHook!</b>\n\n"
-        "<b>Your Webhook URL:</b>\n"
+        "👋 <b>Welcome to PingHook</b>\n\n"
+        "PingHook forwards webhooks, API events, and alerts "
+        "directly to this Telegram chat — instantly.\n\n"
+
+        "<b>🔗 Your Webhook URL</b>\n"
         f"<code>{webhook_url}</code>\n\n"
-        "Send a POST request to this URL.\n"
-        "Any payload will be forwarded here."
+
+        "<b>How it works</b>\n"
+        "• Send a <b>POST</b> request to the URL above\n"
+        "• Any payload (JSON or text) is delivered here\n"
+        "• No setup, no dashboards\n\n"
+
+        "<b>Optional labels (recommended)</b>\n"
+        "Add path segments after the URL to tag events by source or environment.\n\n"
+        "<i>Example</i>\n"
+        f"<code>{webhook_url}/github</code>\n"
+        f"<code>{webhook_url}/n8n/prod</code>\n\n"
+
+        "<b>What you’ll see in Telegram</b>\n"
+        "📍 <b>Source:</b> n8n / prod\n"
+        "🔔 New Webhook Received\n"
+        "{ ...payload... }\n\n"
+
+        "That’s it. Start sending events 🚀"
+
     )
