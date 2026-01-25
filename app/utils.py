@@ -31,26 +31,45 @@ def is_rate_limited(api_key: str) -> bool:
     return False
 
 # Message Formatter
-def format_message(data: dict | str | None) -> str:
+def format_message(
+    data: dict | str | None,
+    labels: list[str] | None = None
+) -> str:
     """
     Formats the incoming webhook data into a readable Telegram message.
     """
-    if data is None:
-        return "<i>Received empty payload.</i>"
+    labels = labels or []
 
+    # ---- Label header (NEW, optional) ----
+    label_text = ""
+    if labels:
+        label_text = f"📍 <b>Source:</b> {' / '.join(labels)}\n\n"
+
+    # ---- Empty payload ----
+    if data is None:
+        return f"{label_text}<i>Received empty payload.</i>"
+
+    # ---- String payload ----
     if isinstance(data, str):
-        # Escape HTML special chars just in case (basic)
         safe_text = data.replace("<", "&lt;").replace(">", "&gt;")
-        return f"<b>New Webhook Received:</b>\n\n{safe_text}"
-    
+        return (
+            "<b>New Webhook Received</b>\n\n"
+            f"{label_text}"
+            f"{safe_text}"
+        )
+
+    # ---- Dict / JSON payload ----
     if isinstance(data, dict):
-        # Pretty print JSON
-        try:
-            formatted_json = json.dumps(data, indent=2, ensure_ascii=False)
-            # Escape for HTML
-            safe_json = formatted_json.replace("<", "&lt;").replace(">", "&gt;")
-            return f"<b>New Webhook Received:</b>\n<pre><code class='language-json'>{safe_json}</code></pre>"
-        except Exception:
-            return f"<b>New Webhook Received:</b>\n\n{str(data)}"
-            
-    return "<i>Received unknown data format.</i>"
+        import json
+        pretty_json = json.dumps(data, indent=2)
+        safe_json = pretty_json.replace("<", "&lt;").replace(">", "&gt;")
+
+        return (
+            "<b>New Webhook Received</b>\n\n"
+            f"{label_text}"
+            f"<pre>{safe_json}</pre>"
+        )
+
+    # ---- Fallback ----
+    return f"{label_text}<i>Unsupported payload format.</i>"
+
