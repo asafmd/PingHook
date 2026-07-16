@@ -99,10 +99,14 @@ def _evaluate_operator(actual, operator: str, expected) -> bool:
         return actual is not None
     if actual is None:
         return False
-    if operator == "eq":
-        return actual == expected
-    if operator == "neq":
-        return actual != expected
+    if operator in ("eq", "neq"):
+        equal = actual == expected
+        if not equal:
+            try:
+                equal = float(actual) == float(expected)
+            except (TypeError, ValueError):
+                pass
+        return equal if operator == "eq" else not equal
     if operator == "contains":
         return str(expected).lower() in str(actual).lower()
     try:

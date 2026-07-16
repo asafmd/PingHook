@@ -267,7 +267,11 @@ async def _handle_send(request: Request, api_key: str, label: str):
 
     channels = await get_channels(user["id"])
     if opts["channel"]:
-        channels = [c for c in channels if c["type"] == opts["channel"]]
+        ch_filter = opts["channel"]
+        if ch_filter == "slack":
+            channels = [c for c in channels if c["type"] in ("slack", "slack_native")]
+        else:
+            channels = [c for c in channels if c["type"] == ch_filter]
 
     footer = user.get("show_footer", True)
     success_count = 0
