@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime, timezone
 
 import httpx
 
@@ -11,21 +12,24 @@ _DEEPSEEK_API_KEY  = os.getenv("DEEPSEEK_API_KEY", "")
 _MAX_PAYLOAD_CHARS = 2000
 
 _PROMPT = """\
-You are a webhook alert triage assistant. A developer received this notification in their Slack or Telegram channel.
+You are a technical alert analyst. A developer just received this webhook notification.
 
+Current time: {now}
 Alert label: "{label}"
 Payload:
 {payload}
 
-Analyse the payload as your primary source. If the payload is insufficient to determine context, use the label as a hint.
-If the payload contains an error or stack trace, identify the root cause and provide a brief resolution.
+Your job is to INTERPRET and EXPLAIN this alert — do not restate or paraphrase JSON field names and values.
+- Convert any timestamps (ISO 8601 or Unix epoch) to plain English relative to the current time (e.g. "2 minutes ago", "yesterday at 5:30 PM UTC").
+- If the payload contains an error, exception, or stack trace: identify the root cause and suggest a concrete resolution.
+- Use the label only when the payload alone is insufficient to determine context.
 
 Write a triage card with exactly 3 lines. No markdown, no bullet points, no extra text:
-Summary: [what happened — derived from payload content, specific values and error messages where present]
+Summary: [interpret what this event means and its real-world impact — not a restatement of field names]
 Severity: [Critical / Warning / Info]
-Next step: [most actionable fix or investigation step based on the payload — under 15 words]
+Next step: [specific, actionable steps to investigate or resolve — reference file names, services, or error types from the payload]
 
-Never write vague statements like "check your system", "review the logs", or "investigate the error". If specifics cannot be determined, say so plainly.\
+Never write vague phrases like "check your system", "review the logs", or "investigate the issue".\
 """
 
 
@@ -36,6 +40,7 @@ async def analyze_payload(
 ) -> str | None:
     # TODO: gate on pro tier once paid tier is implemented
     prompt = _PROMPT.format(
+        now=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         label=label or "(no label)",
         payload=payload[:_MAX_PAYLOAD_CHARS],
     )
@@ -62,14 +67,14 @@ async def _call_claude(prompt: str) -> str | None:
             },
             json={
                 "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 150,
+                "max_tokens": 300,
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=15,
         )
         resp.raise_for_status()
         text = resp.json().get("content", [{}])[0].get("text", "").strip()
-        return _format_card(text) if text else None
+        return text or None
 
 
 async def _call_deepseek(prompt: str) -> str | None:
@@ -85,7 +90,7 @@ async def _call_deepseek(prompt: str) -> str | None:
             },
             json={
                 "model": "deepseek-chat",
-                "max_tokens": 150,
+                "max_tokens": 300,
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=15,
@@ -98,8 +103,4 @@ async def _call_deepseek(prompt: str) -> str | None:
             .get("content", "")
             .strip()
         )
-        return _format_card(text) if text else None
-
-
-def _format_card(text: str) -> str:
-    return f"🤖 AI Triage\n{text}\n──────────────────"
+        return text or None

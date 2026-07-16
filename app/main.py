@@ -268,11 +268,10 @@ async def _handle_send(request: Request, api_key: str, label: str):
         await log_usage(api_key, label, len(raw_body), "suppressed", "silent", 0, payload_str)
         return {"status": "suppressed", "reason": "silent"}
 
+    ai_summary = None
     if opts["ai"] and payload_str:
         provider   = "deepseek" if opts["ai"] == "deepseek" else "claude"
         ai_summary = await analyze_payload(label, payload_str, provider)
-        if ai_summary:
-            payload_str = ai_summary + "\n\n" + payload_str
 
     channels = await get_channels(user["id"])
     if opts["channel"]:
@@ -285,7 +284,7 @@ async def _handle_send(request: Request, api_key: str, label: str):
     footer = user.get("show_footer", True)
     success_count = 0
     for ch in channels:
-        if await dispatch(ch, label, payload_str, footer):
+        if await dispatch(ch, label, payload_str, footer, ai_summary):
             success_count += 1
 
     if success_count > 0:

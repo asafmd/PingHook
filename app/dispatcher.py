@@ -29,16 +29,24 @@ def _format_slack(label: str, payload: str) -> str:
 
 
 
-async def send_telegram(chat_id: str, label: str, payload: str, footer: bool = True) -> bool:
+_AI_CARD_TG    = "\n\n──────────────────\n🤖 <b>AI Triage</b>\n"
+_AI_CARD_SLACK = "\n\n──────────────────\n🤖 *AI Triage*\n"
+
+
+async def send_telegram(chat_id: str, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     text = format_telegram_message(label, payload)
+    if ai_summary:
+        text += _AI_CARD_TG + ai_summary
     if footer:
         text += _FOOTER_TG
     await bot.send_message(chat_id=int(chat_id), text=text)
     return True
 
 
-async def send_slack(webhook_url: str, label: str, payload: str, footer: bool = True) -> bool:
+async def send_slack(webhook_url: str, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     text = _format_slack(label, payload)
+    if ai_summary:
+        text += _AI_CARD_SLACK + ai_summary
     if footer:
         text += _FOOTER_SLACK
     async with httpx.AsyncClient() as client:
@@ -46,9 +54,10 @@ async def send_slack(webhook_url: str, label: str, payload: str, footer: bool = 
         return resp.status_code == 200
 
 
-
-async def send_slack_native(slack_user_id: str, label: str, payload: str, footer: bool = True) -> bool:
+async def send_slack_native(slack_user_id: str, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     text = _format_slack(label, payload)
+    if ai_summary:
+        text += _AI_CARD_SLACK + ai_summary
     if footer:
         text += _FOOTER_SLACK
     async with httpx.AsyncClient() as client:
@@ -62,16 +71,16 @@ async def send_slack_native(slack_user_id: str, label: str, payload: str, footer
         return data.get("ok", False)
 
 
-async def dispatch(channel: dict, label: str, payload: str, footer: bool = True) -> bool:
+async def dispatch(channel: dict, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     try:
         ch_type = channel["type"]
         dest    = channel["destination"]
         if ch_type == "telegram":
-            return await send_telegram(dest, label, payload, footer)
+            return await send_telegram(dest, label, payload, footer, ai_summary)
         elif ch_type == "slack":
-            return await send_slack(dest, label, payload, footer)
+            return await send_slack(dest, label, payload, footer, ai_summary)
         elif ch_type == "slack_native":
-            return await send_slack_native(dest, label, payload, footer)
+            return await send_slack_native(dest, label, payload, footer, ai_summary)
         return False
     except Exception as e:
         logger.error(f"Dispatch failed [{channel.get('type')}]: {e}")
