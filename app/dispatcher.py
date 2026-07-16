@@ -30,8 +30,8 @@ def _format_slack(label: str, payload: str) -> str:
 
 
 
-_AI_HEADER_TG    = "\n\n──────────────────\n🤖 <b>AI Triage</b>\n"
-_AI_HEADER_SLACK = "\n\n──────────────────\n🤖 *AI Triage*\n"
+_AI_HEADER_TG    = "\n\n──────────────────\n🤖 <b>AI Analysis</b>\n"
+_AI_HEADER_SLACK = "\n\n──────────────────\n🤖 *AI Analysis*\n"
 
 
 def _ai_card_slack(text: str) -> str:
