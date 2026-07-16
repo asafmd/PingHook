@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 import httpx
 
@@ -29,14 +30,23 @@ def _format_slack(label: str, payload: str) -> str:
 
 
 
-_AI_CARD_TG    = "\n\n──────────────────\n🤖 <b>AI Triage</b>\n"
-_AI_CARD_SLACK = "\n\n──────────────────\n🤖 *AI Triage*\n"
+_AI_HEADER_TG    = "\n\n──────────────────\n🤖 <b>AI Triage</b>\n"
+_AI_HEADER_SLACK = "\n\n──────────────────\n🤖 *AI Triage*\n"
+
+
+def _ai_card_slack(text: str) -> str:
+    # Bold field labels like "Summary:", "Severity:", "HTTP 503:", "Suggested Next Step:"
+    return re.sub(r"^([^:\n]+:)", r"*\1*", text, flags=re.MULTILINE)
+
+
+def _ai_card_telegram(text: str) -> str:
+    return re.sub(r"^([^:\n]+:)", r"<b>\1</b>", text, flags=re.MULTILINE)
 
 
 async def send_telegram(chat_id: str, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     text = format_telegram_message(label, payload)
     if ai_summary:
-        text += _AI_CARD_TG + ai_summary
+        text += _AI_HEADER_TG + _ai_card_telegram(ai_summary)
     if footer:
         text += _FOOTER_TG
     await bot.send_message(chat_id=int(chat_id), text=text)
@@ -46,7 +56,7 @@ async def send_telegram(chat_id: str, label: str, payload: str, footer: bool = T
 async def send_slack(webhook_url: str, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     text = _format_slack(label, payload)
     if ai_summary:
-        text += _AI_CARD_SLACK + ai_summary
+        text += _AI_HEADER_SLACK + _ai_card_slack(ai_summary)
     if footer:
         text += _FOOTER_SLACK
     async with httpx.AsyncClient() as client:
@@ -57,7 +67,7 @@ async def send_slack(webhook_url: str, label: str, payload: str, footer: bool = 
 async def send_slack_native(slack_user_id: str, label: str, payload: str, footer: bool = True, ai_summary: str | None = None) -> bool:
     text = _format_slack(label, payload)
     if ai_summary:
-        text += _AI_CARD_SLACK + ai_summary
+        text += _AI_HEADER_SLACK + _ai_card_slack(ai_summary)
     if footer:
         text += _FOOTER_SLACK
     async with httpx.AsyncClient() as client:
