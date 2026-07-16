@@ -382,6 +382,10 @@
                     <a href="#layer3">Layer 3 — Bot Rules</a>
                 </div>
                 <div class="nav-group">
+                    <div class="nav-group-title">AI</div>
+                    <a href="#ai-analysis">AI Analysis</a>
+                </div>
+                <div class="nav-group">
                     <div class="nav-group-title">Bot</div>
                     <a href="#bot-commands">All Commands</a>
                 </div>
@@ -588,6 +592,7 @@ _By:_ asaf | _Duration:_ 42s | _Status:_ ~~failing~~ passing"</span></div>
                         <tr><td>?silent=</td><td>1 / true / yes</td><td>Log but don't deliver — dry-run mode</td></tr>
                         <tr><td>?if=</td><td>field:operator:value</td><td>JSON field condition. Repeatable → AND. Fails closed on non-JSON body.</td></tr>
                         <tr><td>?textif=</td><td>word</td><td>Body contains word (case-insensitive). Repeatable → AND. Works on any body type.</td></tr>
+                        <tr><td>?ai=</td><td>1 / claude / deepseek</td><td>Append an AI-generated triage card below the notification. <code>1</code> and <code>claude</code> use Claude Haiku; <code>deepseek</code> uses DeepSeek-V3.</td></tr>
                     </tbody>
                 </table>
 
@@ -617,6 +622,16 @@ _By:_ asaf | _Duration:_ 42s | _Status:_ ~~failing~~ passing"</span></div>
                 <div class="callout callout-warn">
                     <strong>?if= fails closed:</strong> if the body isn't valid JSON, the ping is suppressed. For plain text or mixed sources, use <code>?textif=</code> instead.
                 </div>
+
+                <p>AI triage — analyse the payload and append an interpretation card (Claude Haiku):</p>
+                <div class="code-block">curl "pinghook.dev/send/<span class="u">KEY</span>/alert<span class="k">?ai=1</span>" \
+  -H "Content-Type: application/json" \
+  -d '{"status":503,"service":"payments","error":"connection timeout"}'</div>
+
+                <p>Use DeepSeek-V3 instead:</p>
+                <div class="code-block">curl "pinghook.dev/send/<span class="u">KEY</span>/alert<span class="k">?ai=deepseek</span>" \
+  -H "Content-Type: application/json" \
+  -d '{"status":503,"service":"payments","error":"connection timeout"}'</div>
             </section>
 
             <!-- LAYER 3 -->
@@ -649,6 +664,54 @@ _By:_ asaf | _Duration:_ 42s | _Status:_ ~~failing~~ passing"</span></div>
 
                 <h3>Rule evaluation order</h3>
                 <p>Layer 1 (pinghook_rules in body) → Layer 2 (query params) → Layer 3 (bot rules). Higher layers take full priority. When Layer 1 is present, the <code>?if=</code> and <code>?textif=</code> conditions in Layer 2 are skipped — but <code>?channel=</code> and <code>?dedup=</code> still apply as defaults that Layer 1 can override.</p>
+            </section>
+
+            <!-- AI ANALYSIS -->
+            <section class="docs-section" id="ai-analysis">
+                <h2>AI Analysis</h2>
+                <p>Append <code>?ai=1</code> to any webhook URL and PingHook will analyse the payload with an AI model and attach a triage card below your notification. No prompt engineering needed — just add the param.</p>
+
+                <h3>Providers</h3>
+                <table class="docs-table">
+                    <thead><tr><th>Param</th><th>Model</th></tr></thead>
+                    <tbody>
+                        <tr><td>?ai=1</td><td>Claude Haiku (default)</td></tr>
+                        <tr><td>?ai=claude</td><td>Claude Haiku</td></tr>
+                        <tr><td>?ai=deepseek</td><td>DeepSeek-V3</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Output format</h3>
+                <p>The AI card is appended below the original payload, separated by a divider. It always follows this structure:</p>
+                <div class="code-block">──────────────────
+🤖 AI Analysis
+<span class="k">Summary:</span> 🔴 Payment service timed out on the /charge endpoint — 3 retries exhausted
+<span class="k">Severity:</span> Critical
+<span class="k">HTTP 503:</span> Server-side error — the upstream service is unavailable or overloaded
+<span class="k">Suggested Next Step:</span> Check payments pod health with <code>kubectl get pods -n payments</code> and tail logs on the failing replica</div>
+
+                <h3>Field reference</h3>
+                <table class="docs-table">
+                    <thead><tr><th>Field</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>Summary</td><td>Emoji + plain-English interpretation of what happened and its impact. Emoji signals severity at a glance: 🔴 critical, 🟡 warning, 🟢 resolved, 🎉 success, 🔔 alert, 💳 payment, 🚀 deploy, 🛑 stopped.</td></tr>
+                        <tr><td>Severity</td><td>One of: Critical / Warning / Info / Success</td></tr>
+                        <tr><td>HTTP [code]</td><td>Only present when a 4xx or 5xx status code appears in the payload. Classifies as client-side or server-side and explains the specific code. Omitted for 2xx and when no HTTP status is found.</td></tr>
+                        <tr><td>Suggested Next Step</td><td>Specific, actionable steps referencing real values from the payload — file names, service names, error types. Never generic advice.</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Behaviour notes</h3>
+                <ul>
+                    <li>The label (URL segment after your key) is used as additional context when the payload alone is insufficient.</li>
+                    <li>Timestamps in the payload (ISO 8601 or Unix epoch) are converted to relative human-readable form, e.g. "2 minutes ago".</li>
+                    <li>Payloads are truncated to 2 000 characters before being sent to the AI.</li>
+                    <li>If the AI call fails or times out, the original notification is delivered unchanged — no ping is lost.</li>
+                </ul>
+
+                <div class="callout callout-warn">
+                    <strong>Explicit opt-in only.</strong> AI analysis is never applied globally — you must add <code>?ai=</code> to each source URL where you want it. This keeps analysis intentional and lets you control costs per source.
+                </div>
             </section>
 
             <!-- BOT COMMANDS -->
