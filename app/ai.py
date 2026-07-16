@@ -23,11 +23,21 @@ Your job is to INTERPRET and EXPLAIN this alert — do not restate or paraphrase
 - Convert any timestamps (ISO 8601 or Unix epoch) to plain English relative to the current time (e.g. "2 minutes ago", "yesterday at 5:30 PM UTC").
 - If the payload contains an error, exception, or stack trace: identify the root cause and suggest a concrete resolution.
 - Use the label only when the payload alone is insufficient to determine context.
+- Choose one emoji that best fits the event and prefix the Summary with it:
+  🔴 critical failures, outages, crashes
+  🟡 warnings, degraded performance, high usage
+  🟢 resolved, healthy, back online
+  🎉 successful deployments, milestones, completed jobs
+  🔔 general alerts and notifications
+  💳 payment events
+  🚀 deployments and releases
+  🛑 terminated or stopped services
 
-Write a triage card with exactly 3 lines. No markdown, no bullet points, no extra text:
-Summary: [interpret what this event means and its real-world impact — not a restatement of field names]
-Severity: [Critical / Warning / Info]
-Next step: [specific, actionable steps to investigate or resolve — reference file names, services, or error types from the payload]
+Write a triage card. No markdown, no bullet points, no extra text:
+Summary: [emoji] [real-world interpretation of what happened and its impact]
+Severity: [Critical / Warning / Info / Success]
+HTTP [code]: [ONLY include this line if a 4xx or 5xx HTTP status code exists in the payload. Classify as "Client-side error" (4xx) or "Server-side error" (5xx) and explain what the specific code means in one sentence. Omit this line entirely for 2xx codes or if no HTTP status code is present.]
+Suggested Next Step: [specific actionable steps — reference actual file names, services, error types, or values from the payload]
 
 Never write vague phrases like "check your system", "review the logs", or "investigate the issue".\
 """
