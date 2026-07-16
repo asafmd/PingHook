@@ -25,6 +25,7 @@ from app.database import (
     count_all_pings,
     get_usage_stats,
 )
+from app.ai import analyze_payload
 from app.dispatcher import dispatch
 from app.rate_limiter import check_rate_limit
 from app.rules import (
@@ -147,10 +148,12 @@ async def _resolve_rules(
     Layer 2 — ?if= / ?textif= / ?dedup=   (per-request overrides)
     Layer 3 — global bot rules             (fallback)
     """
+    ai_val = qp.get("ai", "")
     delivery_options = {
         "channel": qp.get("channel"),
         "dedup":   int(qp["dedup"]) if qp.get("dedup", "").isdigit() else None,
         "silent":  qp.get("silent", "0") in ("1", "true", "yes"),
+        "ai":      ai_val if ai_val and ai_val not in ("0", "false", "no") else None,
     }
 
     # Try to parse body as JSON
@@ -264,6 +267,12 @@ async def _handle_send(request: Request, api_key: str, label: str):
     if opts["silent"]:
         await log_usage(api_key, label, len(raw_body), "suppressed", "silent", 0, payload_str)
         return {"status": "suppressed", "reason": "silent"}
+
+    if opts["ai"] and payload_str:
+        provider   = "deepseek" if opts["ai"] == "deepseek" else "claude"
+        ai_summary = await analyze_payload(label, payload_str, provider)
+        if ai_summary:
+            payload_str = ai_summary + "\n\n" + payload_str
 
     channels = await get_channels(user["id"])
     if opts["channel"]:
