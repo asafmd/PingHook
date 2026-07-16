@@ -17,12 +17,15 @@ Alert label: "{label}"
 Payload:
 {payload}
 
-Write a triage card with exactly 3 lines. No markdown, no bullet points, no extra text:
-Summary: [what happened in one clear sentence — reference actual values from the payload]
-Severity: [Critical / Warning / Info]
-Next step: [single most useful investigation or fix action, under 15 words]
+Analyse the payload as your primary source. If the payload is insufficient to determine context, use the label as a hint.
+If the payload contains an error or stack trace, identify the root cause and provide a brief resolution.
 
-Be specific. Avoid generic statements like "check your system" or "investigate the error".\
+Write a triage card with exactly 3 lines. No markdown, no bullet points, no extra text:
+Summary: [what happened — derived from payload content, specific values and error messages where present]
+Severity: [Critical / Warning / Info]
+Next step: [most actionable fix or investigation step based on the payload — under 15 words]
+
+Never write vague statements like "check your system", "review the logs", or "investigate the error". If specifics cannot be determined, say so plainly.\
 """
 
 
