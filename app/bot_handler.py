@@ -15,6 +15,8 @@ from app.database import (
     update_api_key,
     get_usage_stats,
     get_recent_webhooks,
+    save_ai_key,
+    remove_ai_key,
 )
 from app.dispatcher import validate_and_save_webhook, dispatch
 from app.rules import format_rule
@@ -34,6 +36,7 @@ HELP_TEXT = (
     "/pinghook usage — view ping stats\n"
     "/pinghook history — last 10 delivered pings\n"
     "/pinghook replay &lt;n&gt; — re-send ping #n\n"
+    "/pinghook ai-key &lt;key&gt; — save AI API key (BYOK)\n"
     "/pinghook docs — explain each command with examples\n"
     "/pinghook help — this message"
 )
@@ -308,6 +311,9 @@ async def handle_message(
             f"Delivered to {ok_count}/{len(channels)} channel(s)."
         )
 
+    elif command == "/ai-key":
+        await _handle_ai_key(user, args, send_reply)
+
     elif command == "/help":
         await send_reply(HELP_TEXT)
 
@@ -386,6 +392,78 @@ async def _handle_rules(user: dict, args: list, send_reply):
 
     else:
         await send_reply("Type /rules to see your rules, or /help for all commands.")
+
+
+async def _handle_ai_key(user: dict, args: list, send_reply):
+    """
+    /pinghook ai-key <key>              → save as Claude key
+    /pinghook ai-key claude <key>       → save as Claude key
+    /pinghook ai-key deepseek <key>     → save as DeepSeek key
+    /pinghook ai-key remove [provider]  → remove one or all
+    /pinghook ai-key status             → show which keys are set
+    """
+    ai_keys = user.get("ai_keys") or {}
+
+    if not args:
+        await send_reply(
+            "<b>Usage:</b>\n"
+            "/pinghook ai-key &lt;key&gt; — save Claude API key\n"
+            "/pinghook ai-key deepseek &lt;key&gt; — save DeepSeek key\n"
+            "/pinghook ai-key status — check stored keys\n"
+            "/pinghook ai-key remove — remove all keys\n\n"
+            "Once set, use <code>?ai=1</code> in any webhook URL to activate AI Analysis."
+        )
+        return
+
+    subcmd = args[0].lower()
+
+    if subcmd == "status":
+        lines = []
+        for provider in ("claude", "deepseek"):
+            if ai_keys.get(provider):
+                masked = ai_keys[provider][:8] + "••••"
+                lines.append(f"✅ {provider}: <code>{masked}</code>")
+            else:
+                lines.append(f"⬜ {provider}: not set")
+        await send_reply("🔑 <b>AI keys:</b>\n" + "\n".join(lines))
+
+    elif subcmd == "remove":
+        provider = args[1].lower() if len(args) > 1 else None
+        await remove_ai_key(user["id"], provider)
+        msg = f"✅ {provider} key removed." if provider else "✅ All AI keys removed."
+        await send_reply(msg)
+
+    elif subcmd == "deepseek" and len(args) >= 2:
+        key = args[1]
+        await save_ai_key(user["id"], "deepseek", key)
+        await send_reply(
+            "✅ DeepSeek key saved.\n"
+            "Use <code>?ai=deepseek</code> in your webhook URL to activate it."
+        )
+
+    elif subcmd == "claude" and len(args) >= 2:
+        key = args[1]
+        await save_ai_key(user["id"], "claude", key)
+        await send_reply(
+            "✅ Claude key saved.\n"
+            "Use <code>?ai=1</code> or <code>?ai=claude</code> in your webhook URL to activate it."
+        )
+
+    else:
+        # Treat first arg as the key itself — default to Claude
+        key = args[0]
+        if key.startswith("sk-") or len(key) > 20:
+            await save_ai_key(user["id"], "claude", key)
+            await send_reply(
+                "✅ Claude API key saved.\n"
+                "Use <code>?ai=1</code> in your webhook URL to activate AI Analysis."
+            )
+        else:
+            await send_reply(
+                "Unrecognised format. Usage:\n"
+                "/pinghook ai-key &lt;claude-key&gt;\n"
+                "/pinghook ai-key deepseek &lt;key&gt;"
+            )
 
 
 async def _regenerate_key(user: dict) -> dict:

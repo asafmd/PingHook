@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.bot import bot
 from app.bot_handler import handle_message
+from app.dashboard import router as dashboard_router
 from app.slack_bot import verify_slack_signature, post_message as slack_post, html_to_mrkdwn
 from app.config import settings
 from app.database import (
@@ -52,12 +53,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="PingHook",
-    version="4.1.0",
+    version="4.2.0",
     lifespan=lifespan,
     docs_url=None,      # disable Swagger UI — we have our own /docs page
     redoc_url=None,
     openapi_url=None,
 )
+
+app.include_router(dashboard_router)
 
 
 # ── Landing page ──────────────────────────────────────────────────────────────
@@ -247,7 +250,7 @@ async def _handle_send(request: Request, api_key: str, label: str):
             detail={"error": "Account inactive", "code": "INACTIVE"},
         )
 
-    allowed, resets_in = await check_rate_limit(api_key)
+    allowed, resets_in = await check_rate_limit(api_key, is_pro=user.get("is_pro", False))
     if not allowed:
         payload_str = raw_body.decode("utf-8", errors="replace")
         await log_usage(api_key, label, len(raw_body), "rate_limited", None, 0, payload_str)
@@ -271,7 +274,10 @@ async def _handle_send(request: Request, api_key: str, label: str):
     ai_summary = None
     if opts["ai"] and payload_str:
         provider   = "deepseek" if opts["ai"] == "deepseek" else "claude"
-        ai_summary = await analyze_payload(label, payload_str, provider)
+        ai_summary = await analyze_payload(
+            label, payload_str, provider,
+            user_ai_keys=user.get("ai_keys") or {},
+        )
 
     channels = await get_channels(user["id"])
     if opts["channel"]:

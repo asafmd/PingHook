@@ -99,6 +99,18 @@ alter table public.dedup_log enable row level security;
 -- alter table public.usage_logs add column if not exists payload text;
 -- alter table public.users add column if not exists show_footer boolean not null default true;
 
+-- ── Pro tier + web auth migration ────────────────────────────────────────────
+-- Run these ALTER statements in Supabase SQL editor if schema already exists.
+-- alter table public.users add column if not exists email text unique;
+-- alter table public.users add column if not exists password_hash text;
+-- alter table public.users add column if not exists google_id text unique;
+-- alter table public.users add column if not exists github_id text unique;
+-- alter table public.users add column if not exists is_pro boolean not null default false;
+-- alter table public.users add column if not exists pro_expires_at timestamptz;
+-- alter table public.users add column if not exists stripe_customer_id text unique;
+-- alter table public.users add column if not exists stripe_subscription_id text;
+-- alter table public.users add column if not exists ai_keys jsonb not null default '{}';
+
 -- ── Atomic rate-limit counter increment ───────────────────────────────────────
 create or replace function increment_rate_counters(p_api_key text)
 returns void language sql as $$

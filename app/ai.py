@@ -47,31 +47,33 @@ async def analyze_payload(
     label: str,
     payload: str,
     provider: str = "claude",
+    user_ai_keys: dict | None = None,
 ) -> str | None:
-    # TODO: gate on pro tier once paid tier is implemented
     prompt = _PROMPT.format(
         now=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         label=label or "(no label)",
         payload=payload[:_MAX_PAYLOAD_CHARS],
     )
+    user_ai_keys = user_ai_keys or {}
     try:
         if provider == "deepseek":
-            return await _call_deepseek(prompt)
-        return await _call_claude(prompt)
+            return await _call_deepseek(prompt, user_ai_keys.get("deepseek"))
+        return await _call_claude(prompt, user_ai_keys.get("claude"))
     except Exception as e:
         logger.error(f"AI analysis failed [{provider}]: {e}")
         return None
 
 
-async def _call_claude(prompt: str) -> str | None:
-    if not _ANTHROPIC_API_KEY:
-        logger.warning("ANTHROPIC_API_KEY not set — skipping AI analysis")
+async def _call_claude(prompt: str, user_key: str | None = None) -> str | None:
+    key = user_key or _ANTHROPIC_API_KEY
+    if not key:
+        logger.warning("No Claude API key available — skipping AI analysis")
         return None
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             "https://api.anthropic.com/v1/messages",
             headers={
-                "x-api-key": _ANTHROPIC_API_KEY,
+                "x-api-key": key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
             },
@@ -87,15 +89,16 @@ async def _call_claude(prompt: str) -> str | None:
         return text or None
 
 
-async def _call_deepseek(prompt: str) -> str | None:
-    if not _DEEPSEEK_API_KEY:
-        logger.warning("DEEPSEEK_API_KEY not set — skipping AI analysis")
+async def _call_deepseek(prompt: str, user_key: str | None = None) -> str | None:
+    key = user_key or _DEEPSEEK_API_KEY
+    if not key:
+        logger.warning("No DeepSeek API key available — skipping AI analysis")
         return None
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             "https://api.deepseek.com/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {_DEEPSEEK_API_KEY}",
+                "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
             },
             json={

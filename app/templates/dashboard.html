@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — PingHook</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪝</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0f0a;
+            --bg-sidebar: #0c140c;
+            --bg-card: #111811;
+            --bg-hover: #162016;
+            --bg-input: #0f1a0f;
+            --accent: #10b981;
+            --accent-light: #34d399;
+            --accent-glow: rgba(16,185,129,0.12);
+            --border: #1a2e1a;
+            --border-focus: rgba(16,185,129,0.45);
+            --text: #f1f5f1;
+            --text-secondary: #8a9b8a;
+            --text-muted: #4a5c4a;
+            --success: #22c55e;
+            --error: #ef4444;
+            --pro: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            text-decoration: none;
+            color: var(--text);
+            padding: 0 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--accent), #22c55e);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .nav-section {
+            padding: 0 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 0 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            text-decoration: none;
+        }
+
+        .nav-item:hover { background: var(--bg-hover); color: var(--text); }
+        .nav-item.active { background: var(--accent-glow); color: var(--accent-light); }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+            flex-shrink: 0;
+        }
+
+        .nav-item.active .nav-icon { opacity: 1; }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 0 0.75rem;
+        }
+
+        .plan-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 100px;
+            margin: 0 0.5rem 0.75rem;
+        }
+
+        .plan-chip.free {
+            background: rgba(161,161,170,0.1);
+            color: var(--text-secondary);
+            border: 1px solid rgba(161,161,170,0.2);
+        }
+
+        .plan-chip.pro {
+            background: rgba(245,158,11,0.1);
+            color: var(--pro);
+            border: 1px solid rgba(245,158,11,0.25);
+        }
+
+        .user-email {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            padding: 0 1.25rem;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ── Main content ── */
+        .main {
+            margin-left: 220px;
+            flex: 1;
+            padding: 2rem 2.5rem;
+            max-width: calc(100vw - 220px);
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--success);
+            color: #86efac;
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            z-index: 100;
+            animation: slideIn 0.3s ease, fadeOut 0.4s ease 3s forwards;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        /* ── Tab sections ── */
+        .tab-section { display: none; }
+        .tab-section.active { display: block; }
+
+        /* ── Stat cards ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+        }
+
+        .stat-label {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.6rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Sections ── */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .section-body { padding: 1.5rem; }
+
+        /* ── Webhook URL ── */
+        .url-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .url-display {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.7rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-light);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn-sm {
+            padding: 0.55rem 1rem;
+            border-radius: 7px;
+            border: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .btn-sm:active { transform: scale(0.97); }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-accent:hover { background: var(--accent-light); }
+
+        .btn-danger {
+            background: transparent;
+            color: #fca5a5;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+
+        .btn-danger:hover { background: rgba(239,68,68,0.1); border-color: var(--error); }
+
+        .url-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.6rem;
+        }
+
+        .url-hint code {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            background: var(--bg-input);
+            padding: 0.1em 0.4em;
+            border-radius: 4px;
+            font-size: 0.82em;
+        }
+
+        /* ── Channels ── */
+        .channel-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-input);
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+
+        .channel-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .channel-type {
+            font-size: 0.75rem;
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            border: 1px solid rgba(16,185,129,0.2);
+            padding: 0.15rem 0.5rem;
+            border-radius: 100px;
+            font-weight: 500;
+        }
+
+        .channel-dest { color: var(--text-secondary); flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+
+        /* ── Pings table ── */
+        .pings-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .pings-table th {
+            text-align: left;
+            font-size: 0.73rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 0 0.75rem 0.75rem;
+        }
+
+        .pings-table td {
+            padding: 0.6rem 0.75rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+
+        .pings-table tr:hover td { background: var(--bg-hover); }
+
+        .label-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            background: var(--bg-input);
+            padding: 0.2em 0.55em;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* ── Settings ── */
+        .settings-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .field-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .field-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+            color: var(--text);
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="email"]:focus { border-color: var(--border-focus); }
+
+        input::placeholder { color: var(--text-muted); font-family: inherit; }
+
+        .key-set-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            color: #86efac;
+            background: rgba(34,197,94,0.1);
+            border: 1px solid rgba(34,197,94,0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 100px;
+        }
+
+        /* ── Billing ── */
+        .plan-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-card.pro-card {
+            border-color: rgba(245,158,11,0.3);
+            background: rgba(245,158,11,0.04);
+        }
+
+        .plan-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .plan-price {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 1.25rem;
+        }
+
+        .plan-price span {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            padding: 0.35rem 0;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .btn-upgrade {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 9px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+            transition: opacity 0.2s, transform 0.1s;
+            text-decoration: none;
+        }
+
+        .btn-upgrade:hover { opacity: 0.9; }
+        .btn-upgrade:active { transform: scale(0.98); }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            margin-top: 1.5rem;
+        }
+
+        .compare-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .compare-table td {
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .compare-table td:first-child { color: var(--text); }
+
+        .check { color: var(--success); font-weight: 700; }
+        .cross { color: var(--text-muted); }
+
+        /* ── Danger zone ── */
+        .danger-zone {
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .danger-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fca5a5;
+            margin-bottom: 0.35rem;
+        }
+
+        .danger-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; max-width: 100%; padding: 1.5rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .settings-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <a href="/" class="sidebar-logo">
+            <div class="logo-icon">🪝</div>
+            PingHook
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-label">Account</div>
+            <button class="nav-item active" onclick="switchTab('overview', this)">
+                <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+                Overview
+            </button>
+            <button class="nav-item" onclick="switchTab('settings', this)">
+                <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+                Settings
+            </button>
+            <button class="nav-item" onclick="switchTab('billing', this)">
+                <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="9" rx="1.5"/><path d="M1 7h14"/></svg>
+                Billing
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            {% if user.email %}
+            <div class="user-email">{{ user.email }}</div>
+            {% endif %}
+            <div class="plan-chip {{ 'pro' if user.is_pro else 'free' }}">
+                {{ '⚡ Pro' if user.is_pro else 'Free plan' }}
+            </div>
+            <div class="nav-section" style="margin-top:0.5rem;">
+                <a href="/auth/logout" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 8H2M6 5l-3 3 3 3"/><path d="M6 2h6a1 1 0 011 1v10a1 1 0 01-1 1H6"/></svg>
+                    Log out
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+        <!-- Toast -->
+        {% set qp = request.query_params %}
+        {% if qp.get('saved') %}<div class="toast">✓ Saved successfully</div>{% endif %}
+        {% if qp.get('removed') %}<div class="toast">✓ Key removed</div>{% endif %}
+        {% if qp.get('upgraded') %}<div class="toast" style="border-color:var(--pro);color:#fcd34d;">⚡ You're now on Pro!</div>{% endif %}
+
+        <!-- ── Overview ── -->
+        <div class="tab-section active" id="tab-overview">
+            <div class="page-header">
+                <h1 class="page-title">Overview</h1>
+                <p class="page-subtitle">Your webhook delivery at a glance</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Pings today</div>
+                    <div class="stat-value">{{ stats.today }}</div>
+                    <div class="stat-sub">{{ stats.suppressed_today }} suppressed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">This week</div>
+                    <div class="stat-value">{{ stats.this_week }}</div>
+                    <div class="stat-sub">last 7 days</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">All time</div>
+                    <div class="stat-value">{{ stats.total }}</div>
+                    <div class="stat-sub">total pings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Last ping</div>
+                    <div class="stat-value" style="font-size:1.2rem;padding-top:0.5rem;">{{ stats.last_ping_ago }}</div>
+                    <div class="stat-sub">{{ stats.last_label }}</div>
+                </div>
+            </div>
+
+            <!-- Webhook URL -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Webhook URL</span>
+                </div>
+                <div class="section-body">
+                    <div class="url-row">
+                        <div class="url-display" id="webhookUrl">{{ base_url }}/send/{{ user.api_key }}</div>
+                        <button class="btn-sm btn-ghost" onclick="copyUrl()">Copy</button>
+                    </div>
+                    <p class="url-hint">
+                        Append a label: <code>{{ base_url }}/send/{{ user.api_key }}/grafana-alert</code><br>
+                        Add AI analysis: <code>...?ai=1</code> &nbsp;·&nbsp; Route only to Slack: <code>...?channel=slack</code>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Channels -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Connected channels</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted)">{{ channels|length }} active</span>
+                </div>
+                <div class="section-body">
+                    {% if channels %}
+                    <div class="channel-list">
+                        {% for ch in channels %}
+                        <div class="channel-item">
+                            <div class="channel-dot"></div>
+                            <span class="channel-type">{{ ch.type }}</span>
+                            <span class="channel-dest">{{ ch.label or ch.destination[:32] }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        No channels yet.<br>
+                        Send <code style="font-family:'JetBrains Mono',monospace;font-size:0.8em;">/pinghook</code> in Slack or Telegram to connect one.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent pings -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Recent pings</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted)">last 10 delivered</span>
+                </div>
+                <div class="section-body" style="padding:0;">
+                    {% if recent %}
+                    <table class="pings-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Label</th>
+                                <th>Time</th>
+                                <th>Channels</th>
+                                <th>Size</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ping in recent %}
+                            <tr>
+                                <td style="color:var(--text-muted);">{{ loop.index }}</td>
+                                <td><span class="label-pill">{{ ping.label or '(no label)' }}</span></td>
+                                <td>{{ ping.created_at[:16].replace('T', ' ') }}</td>
+                                <td>{{ ping.channels_notified }}</td>
+                                <td>{{ ping.payload|length if ping.payload else 0 }} B</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">No delivered pings yet. POST to your webhook URL to see them here.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Settings ── -->
+        <div class="tab-section" id="tab-settings">
+            <div class="page-header">
+                <h1 class="page-title">Settings</h1>
+                <p class="page-subtitle">AI keys, API key management, and account</p>
+            </div>
+
+            <!-- BYOK AI Keys -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">AI Analysis — Bring Your Own Key</span>
+                    <span style="font-size:0.78rem;color:var(--text-muted)">Used when ?ai=1 is in your URL</span>
+                </div>
+                <div class="section-body">
+                    <div class="settings-row">
+                        <!-- Claude -->
+                        <div>
+                            <div class="field-label">
+                                Claude (Anthropic)
+                                {% if ai_keys.get('claude') %}
+                                <span class="key-set-badge">✓ Set</span>
+                                {% endif %}
+                            </div>
+                            {% if ai_keys.get('claude') %}
+                            <div class="input-row" style="margin-bottom:0.5rem;">
+                                <div class="url-display" style="font-size:0.8rem;padding:0.5rem 0.75rem;">
+                                    {{ ai_keys.claude[:8] }}••••••••••••
+                                </div>
+                            </div>
+                            <form method="POST" action="/dashboard/ai-key/remove" style="display:inline;">
+                                <input type="hidden" name="provider" value="claude">
+                                <button type="submit" class="btn-sm btn-danger">Remove</button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="/dashboard/ai-key">
+                                <input type="hidden" name="provider" value="claude">
+                                <div class="input-row">
+                                    <input type="password" name="key" placeholder="sk-ant-..." autocomplete="off">
+                                    <button type="submit" class="btn-sm btn-accent">Save</button>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        <!-- DeepSeek -->
+                        <div>
+                            <div class="field-label">
+                                DeepSeek
+                                {% if ai_keys.get('deepseek') %}
+                                <span class="key-set-badge">✓ Set</span>
+                                {% endif %}
+                            </div>
+                            {% if ai_keys.get('deepseek') %}
+                            <div class="input-row" style="margin-bottom:0.5rem;">
+                                <div class="url-display" style="font-size:0.8rem;padding:0.5rem 0.75rem;">
+                                    {{ ai_keys.deepseek[:8] }}••••••••••••
+                                </div>
+                            </div>
+                            <form method="POST" action="/dashboard/ai-key/remove" style="display:inline;">
+                                <input type="hidden" name="provider" value="deepseek">
+                                <button type="submit" class="btn-sm btn-danger">Remove</button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="/dashboard/ai-key">
+                                <input type="hidden" name="provider" value="deepseek">
+                                <div class="input-row">
+                                    <input type="password" name="key" placeholder="sk-..." autocomplete="off">
+                                    <button type="submit" class="btn-sm btn-accent">Save</button>
+                                </div>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-top:1rem;">
+                        Keys are stored encrypted. If no key is set, PingHook uses its own shared key when available.
+                    </p>
+                </div>
+            </div>
+
+            <!-- API Key -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">API Key</span>
+                </div>
+                <div class="section-body">
+                    <div class="field-label" style="margin-bottom:0.5rem;">Your current API key</div>
+                    <div class="url-row">
+                        <div class="url-display" id="apiKeyDisplay">{{ user.api_key }}</div>
+                        <button class="btn-sm btn-ghost" onclick="copyApiKey()">Copy</button>
+                    </div>
+                    <p class="url-hint" style="margin-top:0.75rem;margin-bottom:1.25rem;">
+                        This key is embedded in your webhook URL. Use <code>/pinghook regen confirm</code> in Slack or Telegram to rotate it.
+                    </p>
+                    <div class="danger-zone">
+                        <div class="danger-title">Danger zone</div>
+                        <div class="danger-desc">Regenerating your API key immediately invalidates your current webhook URL. All integrations using the old URL will stop working until updated.</div>
+                        <p style="font-size:0.8rem;color:var(--text-muted);">Use <code style="font-family:'JetBrains Mono',monospace;">/pinghook regen confirm</code> in your bot to regenerate.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account -->
+            {% if user.email %}
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Account</span>
+                </div>
+                <div class="section-body">
+                    <div class="field-label">Email</div>
+                    <p style="color:var(--text-secondary);font-size:0.875rem;">{{ user.email }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Billing ── -->
+        <div class="tab-section" id="tab-billing">
+            <div class="page-header">
+                <h1 class="page-title">Billing</h1>
+                <p class="page-subtitle">Plan and subscription management</p>
+            </div>
+
+            {% if user.is_pro %}
+            <div class="plan-card pro-card">
+                <div class="plan-name">
+                    <span style="color:var(--pro);">⚡</span> PingHook Pro
+                    <span class="plan-chip pro">Active</span>
+                </div>
+                <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1.25rem;">
+                    You're on the Pro plan. Thank you for your support.
+                </p>
+                {% if user.pro_expires_at %}
+                <p style="font-size:0.8rem;color:var(--text-muted);">Renews: {{ user.pro_expires_at[:10] }}</p>
+                {% endif %}
+                {% if user.stripe_subscription_id %}
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">
+                    To cancel, contact us or manage via your Stripe customer portal.
+                </p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="plan-card">
+                <div class="plan-name">PingHook Pro</div>
+                <div class="plan-price">{{ pro_price }}<span>/month</span></div>
+                <ul class="feature-list">
+                    <li>AI Analysis with <code style="font-family:'JetBrains Mono',monospace;font-size:0.8em;">?ai=1</code> — Claude Haiku + DeepSeek</li>
+                    <li>Bring Your Own AI Key — control your AI costs</li>
+                    <li>1,000 pings/hour (vs 100 on free)</li>
+                    <li>10,000 pings/day (vs 1,000 on free)</li>
+                    <li>90-day ping history</li>
+                    <li>Priority support</li>
+                </ul>
+                {% if stripe_enabled %}
+                <form method="POST" action="/dashboard/billing/checkout">
+                    <button type="submit" class="btn-upgrade">
+                        ⚡ Upgrade to Pro &rarr;
+                    </button>
+                </form>
+                {% else %}
+                <p style="font-size:0.85rem;color:var(--text-muted);">Billing not yet configured. Check back soon.</p>
+                {% endif %}
+            </div>
+
+            <div class="section">
+                <div class="section-header"><span class="section-title">Free vs Pro</span></div>
+                <div class="section-body" style="padding:0;">
+                    <table class="compare-table">
+                        <thead>
+                            <tr><th>Feature</th><th>Free</th><th>Pro</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Webhook delivery</td><td class="check">✓</td><td class="check">✓</td></tr>
+                            <tr><td>Labels &amp; rules</td><td class="check">✓</td><td class="check">✓</td></tr>
+                            <tr><td>AI Analysis (?ai=1)</td><td class="cross">—</td><td class="check">✓</td></tr>
+                            <tr><td>BYOK AI key</td><td class="cross">—</td><td class="check">✓</td></tr>
+                            <tr><td>Hourly limit</td><td>100</td><td>1,000</td></tr>
+                            <tr><td>Daily limit</td><td>1,000</td><td>10,000</td></tr>
+                            <tr><td>Ping history</td><td>30 days</td><td>90 days</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </main>
+
+    <script>
+        // Tab switching
+        function switchTab(name, btn) {
+            document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            btn.classList.add('active');
+            history.replaceState(null, '', '/dashboard?tab=' + name);
+        }
+
+        // Restore tab from URL
+        const urlTab = new URLSearchParams(location.search).get('tab');
+        if (urlTab) {
+            const btn = document.querySelector(`.nav-item[onclick*="'${urlTab}'"]`);
+            if (btn) switchTab(urlTab, btn);
+        }
+
+        // Copy helpers
+        function copyUrl() {
+            const url = document.getElementById('webhookUrl').textContent.trim();
+            navigator.clipboard.writeText(url).then(() => showToast('URL copied!'));
+        }
+
+        function copyApiKey() {
+            const key = document.getElementById('apiKeyDisplay').textContent.trim();
+            navigator.clipboard.writeText(key).then(() => showToast('Key copied!'));
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = '✓ ' + msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        // Auto-dismiss existing toasts
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+        }, 3500);
+    </script>
+</body>
+</html>

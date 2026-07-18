@@ -548,3 +548,226 @@ async def count_all_pings() -> int:
     except Exception as e:
         logger.error(f"[DB] count_all_pings failed: {e}")
         return 0
+
+
+# ── Web auth ──────────────────────────────────────────────────────────────────
+
+async def get_user_by_id(user_id: str) -> dict | None:
+    def _query():
+        return supabase.table("users").select("*").eq("id", user_id).limit(1).execute()
+
+    try:
+        resp = await asyncio.to_thread(_query)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] get_user_by_id failed: {e}")
+        return None
+
+
+async def get_user_by_email(email: str) -> dict | None:
+    def _query():
+        return supabase.table("users").select("*").eq("email", email).limit(1).execute()
+
+    try:
+        resp = await asyncio.to_thread(_query)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] get_user_by_email failed: {e}")
+        return None
+
+
+async def get_user_by_google_id(google_id: str) -> dict | None:
+    def _query():
+        return supabase.table("users").select("*").eq("google_id", google_id).limit(1).execute()
+
+    try:
+        resp = await asyncio.to_thread(_query)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] get_user_by_google_id failed: {e}")
+        return None
+
+
+async def get_user_by_github_id(github_id: str) -> dict | None:
+    def _query():
+        return supabase.table("users").select("*").eq("github_id", github_id).limit(1).execute()
+
+    try:
+        resp = await asyncio.to_thread(_query)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] get_user_by_github_id failed: {e}")
+        return None
+
+
+async def create_web_user(email: str, password_hash: str) -> dict | None:
+    api_key = secrets.token_urlsafe(32)
+
+    def _insert():
+        return supabase.table("users").insert({
+            "api_key":       api_key,
+            "email":         email,
+            "password_hash": password_hash,
+        }).execute()
+
+    try:
+        resp = await asyncio.to_thread(_insert)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] create_web_user failed: {e}")
+        return None
+
+
+async def link_email_to_user(user_id: str, email: str, password_hash: str) -> bool:
+    def _update():
+        return supabase.table("users").update({
+            "email":         email,
+            "password_hash": password_hash,
+        }).eq("id", user_id).execute()
+
+    try:
+        await asyncio.to_thread(_update)
+        return True
+    except Exception as e:
+        logger.error(f"[DB] link_email_to_user failed: {e}")
+        return False
+
+
+async def link_google_to_user(user_id: str, google_id: str, email: str | None) -> bool:
+    updates: dict = {"google_id": google_id}
+    if email:
+        updates["email"] = email
+
+    def _update():
+        return supabase.table("users").update(updates).eq("id", user_id).execute()
+
+    try:
+        await asyncio.to_thread(_update)
+        return True
+    except Exception as e:
+        logger.error(f"[DB] link_google_to_user failed: {e}")
+        return False
+
+
+async def link_github_to_user(user_id: str, github_id: str, email: str | None) -> bool:
+    updates: dict = {"github_id": github_id}
+    if email:
+        updates["email"] = email
+
+    def _update():
+        return supabase.table("users").update(updates).eq("id", user_id).execute()
+
+    try:
+        await asyncio.to_thread(_update)
+        return True
+    except Exception as e:
+        logger.error(f"[DB] link_github_to_user failed: {e}")
+        return False
+
+
+async def create_oauth_user(provider: str, provider_id: str, email: str | None) -> dict | None:
+    api_key = secrets.token_urlsafe(32)
+    data: dict = {"api_key": api_key, f"{provider}_id": provider_id}
+    if email:
+        data["email"] = email
+
+    def _insert():
+        return supabase.table("users").insert(data).execute()
+
+    try:
+        resp = await asyncio.to_thread(_insert)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] create_oauth_user failed: {e}")
+        return None
+
+
+# ── Pro tier ──────────────────────────────────────────────────────────────────
+
+async def set_pro_status(
+    user_id: str,
+    is_pro: bool,
+    stripe_customer_id: str | None = None,
+    stripe_subscription_id: str | None = None,
+    pro_expires_at: str | None = None,
+) -> bool:
+    updates: dict = {"is_pro": is_pro}
+    if stripe_customer_id:
+        updates["stripe_customer_id"] = stripe_customer_id
+    if stripe_subscription_id:
+        updates["stripe_subscription_id"] = stripe_subscription_id
+    if pro_expires_at:
+        updates["pro_expires_at"] = pro_expires_at
+
+    def _update():
+        return supabase.table("users").update(updates).eq("id", user_id).execute()
+
+    try:
+        await asyncio.to_thread(_update)
+        return True
+    except Exception as e:
+        logger.error(f"[DB] set_pro_status failed: {e}")
+        return False
+
+
+async def get_user_by_stripe_customer(customer_id: str) -> dict | None:
+    def _query():
+        return (
+            supabase.table("users")
+            .select("*")
+            .eq("stripe_customer_id", customer_id)
+            .limit(1)
+            .execute()
+        )
+
+    try:
+        resp = await asyncio.to_thread(_query)
+        return resp.data[0] if resp.data else None
+    except Exception as e:
+        logger.error(f"[DB] get_user_by_stripe_customer failed: {e}")
+        return None
+
+
+# ── BYOK AI keys ──────────────────────────────────────────────────────────────
+
+async def save_ai_key(user_id: str, provider: str, key: str) -> bool:
+    """Merge provider key into the ai_keys JSONB column."""
+    user = await get_user_by_id(user_id)
+    if not user:
+        return False
+
+    existing = user.get("ai_keys") or {}
+    existing[provider] = key
+
+    def _update():
+        return supabase.table("users").update({"ai_keys": existing}).eq("id", user_id).execute()
+
+    try:
+        await asyncio.to_thread(_update)
+        return True
+    except Exception as e:
+        logger.error(f"[DB] save_ai_key failed: {e}")
+        return False
+
+
+async def remove_ai_key(user_id: str, provider: str | None = None) -> bool:
+    """Remove one provider key or all keys."""
+    if provider:
+        user = await get_user_by_id(user_id)
+        if not user:
+            return False
+        existing = dict(user.get("ai_keys") or {})
+        existing.pop(provider, None)
+        new_keys = existing
+    else:
+        new_keys = {}
+
+    def _update():
+        return supabase.table("users").update({"ai_keys": new_keys}).eq("id", user_id).execute()
+
+    try:
+        await asyncio.to_thread(_update)
+        return True
+    except Exception as e:
+        logger.error(f"[DB] remove_ai_key failed: {e}")
+        return False

@@ -256,6 +256,52 @@
             color: var(--text-muted);
         }
 
+        /* ── Source flow animation ── */
+        .source-flow {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .source-node {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .source-node-center {
+            border-color: rgba(16,185,129,0.4);
+            color: var(--accent-light);
+            background: var(--accent-glow);
+        }
+
+        .source-arrow {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .source-name {
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .source-name.exit {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+
+        .source-name.enter {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
         /* ── Slack Mockup ── */
         .slack-mockup {
             background: var(--bg-slack);
@@ -804,6 +850,7 @@
                 <nav style="display:flex;align-items:center;gap:0.25rem;">
                     <a href="/docs" style="font-size:0.875rem;color:var(--text-secondary);text-decoration:none;padding:0.4rem 0.75rem;border-radius:8px;transition:color 0.2s,background 0.2s;" onmouseover="this.style.color='#fff';this.style.background='var(--bg-card)'" onmouseout="this.style.color='var(--text-secondary)';this.style.background='transparent'">Docs</a>
                     <a href="/blog" style="font-size:0.875rem;color:var(--text-secondary);text-decoration:none;padding:0.4rem 0.75rem;border-radius:8px;transition:color 0.2s,background 0.2s;" onmouseover="this.style.color='#fff';this.style.background='var(--bg-card)'" onmouseout="this.style.color='var(--text-secondary)';this.style.background='transparent'">Blog</a>
+                    <a href="/dashboard" style="font-size:0.875rem;color:var(--accent-light);text-decoration:none;padding:0.4rem 0.9rem;border-radius:8px;border:1px solid rgba(16,185,129,0.3);transition:background 0.2s,border-color 0.2s;" onmouseover="this.style.background='var(--accent-glow)';this.style.borderColor='var(--accent)'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(16,185,129,0.3)'">Dashboard</a>
                     <a href="https://github.com/PingHook/PingHook" class="github-link" target="_blank" rel="noopener">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
@@ -826,6 +873,16 @@
                         <div class="badge">
                             <span class="badge-dot"></span>
                             Free &middot; Open Source &middot; No Signup
+                        </div>
+
+                        <div class="source-flow">
+                            <div class="source-node">
+                                <span class="source-name" id="sourceName">Grafana</span>
+                            </div>
+                            <div class="source-arrow">→</div>
+                            <div class="source-node source-node-center">PingHook</div>
+                            <div class="source-arrow">→</div>
+                            <div class="source-node">Slack</div>
                         </div>
 
                         <h1 class="hero-brand">Webhook alerts<br>straight into<br>Slack.</h1>
@@ -1165,6 +1222,27 @@ requests.post(PINGHOOK_URL + <span class="c-val">"/cron-done"</span>, data=<span
             document.getElementById(id).classList.add('active');
             btn.classList.add('active');
         }
+
+        // Source cycling animation
+        (function() {
+            const sources = ['Grafana', 'HubSpot', 'Stripe', 'GitHub', 'Uptime Kuma', 'Sentry', 'Datadog', 'n8n'];
+            let idx = 0;
+            const el = document.getElementById('sourceName');
+            if (!el) return;
+
+            setInterval(() => {
+                el.classList.add('exit');
+                setTimeout(() => {
+                    idx = (idx + 1) % sources.length;
+                    el.textContent = sources[idx];
+                    el.classList.remove('exit');
+                    el.classList.add('enter');
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => { el.classList.remove('enter'); });
+                    });
+                }, 300);
+            }, 2500);
+        })();
 
     </script>
 
