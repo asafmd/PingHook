@@ -20,12 +20,10 @@ from app.database import (
     get_user_by_api_key,
     get_user_by_email,
     get_user_by_google_id,
-    get_user_by_github_id,
     create_web_user,
     create_oauth_user,
     link_email_to_user,
     link_google_to_user,
-    link_github_to_user,
     get_channels,
     get_usage_stats,
     get_recent_webhooks,
@@ -39,13 +37,9 @@ logger    = logging.getLogger(__name__)
 router    = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-_GOOGLE_AUTH_URL    = "https://accounts.google.com/o/oauth2/v2/auth"
-_GOOGLE_TOKEN_URL   = "https://oauth2.googleapis.com/token"
-_GOOGLE_USERINFO    = "https://www.googleapis.com/oauth2/v2/userinfo"
-_GITHUB_AUTH_URL    = "https://github.com/login/oauth/authorize"
-_GITHUB_TOKEN_URL   = "https://github.com/login/oauth/access_token"
-_GITHUB_USER_URL    = "https://api.github.com/user"
-_GITHUB_EMAILS_URL  = "https://api.github.com/user/emails"
+_GOOGLE_AUTH_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_USERINFO  = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
 def _base_url() -> str:
@@ -73,7 +67,6 @@ async def login_page(request: Request, error: str = ""):
         "request": request,
         "error":   error,
         "google_enabled": bool(settings.GOOGLE_CLIENT_ID),
-        "github_enabled": bool(settings.GITHUB_CLIENT_ID),
     })
 
 
@@ -114,7 +107,6 @@ async def register_page(request: Request, error: str = ""):
         "request": request,
         "error":   error,
         "google_enabled": bool(settings.GOOGLE_CLIENT_ID),
-        "github_enabled": bool(settings.GITHUB_CLIENT_ID),
     })
 
 
@@ -220,84 +212,6 @@ async def google_callback(request: Request, code: str = "", state: str = "", err
         return _redirect("/auth/login?error=Google+sign-in+failed")
     return login_response(user["id"])
 
-
-# ── GitHub OAuth ──────────────────────────────────────────────────────────────
-
-@router.get("/auth/github")
-async def github_login(request: Request):
-    if not settings.GITHUB_CLIENT_ID:
-        return _redirect("/auth/login?error=GitHub+login+not+configured")
-    state    = secrets.token_urlsafe(16)
-    callback = f"{_base_url()}/auth/github/callback"
-    params   = (
-        f"client_id={settings.GITHUB_CLIENT_ID}"
-        f"&redirect_uri={callback}"
-        f"&scope=user:email"
-        f"&state={state}"
-    )
-    response = RedirectResponse(url=f"{_GITHUB_AUTH_URL}?{params}", status_code=303)
-    response.set_cookie("oauth_state", state, httponly=True, max_age=300)
-    return response
-
-
-@router.get("/auth/github/callback")
-async def github_callback(request: Request, code: str = "", state: str = "", error: str = ""):
-    if error or not code:
-        return _redirect("/auth/login?error=GitHub+login+cancelled")
-
-    callback = f"{_base_url()}/auth/github/callback"
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            _GITHUB_TOKEN_URL,
-            data={
-                "code":          code,
-                "client_id":     settings.GITHUB_CLIENT_ID,
-                "client_secret": settings.GITHUB_CLIENT_SECRET,
-                "redirect_uri":  callback,
-            },
-            headers={"Accept": "application/json"},
-        )
-        if token_resp.status_code != 200:
-            return _redirect("/auth/login?error=GitHub+token+exchange+failed")
-        access_token = token_resp.json().get("access_token")
-
-        user_resp = await client.get(
-            _GITHUB_USER_URL,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Accept": "application/vnd.github+json",
-            },
-        )
-        if user_resp.status_code != 200:
-            return _redirect("/auth/login?error=Could+not+fetch+GitHub+profile")
-        gh_user   = user_resp.json()
-        github_id = str(gh_user.get("id", ""))
-        email     = gh_user.get("email") or ""
-
-        if not email:
-            emails_resp = await client.get(
-                _GITHUB_EMAILS_URL,
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Accept": "application/vnd.github+json",
-                },
-            )
-            if emails_resp.status_code == 200:
-                for e in emails_resp.json():
-                    if e.get("primary") and e.get("verified"):
-                        email = e["email"]
-                        break
-
-    user = await get_user_by_github_id(github_id)
-    if not user:
-        user = await get_user_by_email(email) if email else None
-        if user:
-            await link_github_to_user(user["id"], github_id, email)
-        else:
-            user = await create_oauth_user("github", github_id, email)
-    if not user:
-        return _redirect("/auth/login?error=GitHub+sign-in+failed")
-    return login_response(user["id"])
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
