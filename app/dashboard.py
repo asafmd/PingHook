@@ -2,7 +2,6 @@ import logging
 import secrets
 
 import httpx
-import stripe
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -29,8 +28,6 @@ from app.database import (
     get_recent_webhooks,
     save_ai_key,
     remove_ai_key,
-    set_pro_status,
-    get_user_by_stripe_customer,
 )
 
 logger    = logging.getLogger(__name__)
@@ -232,9 +229,7 @@ async def dashboard(request: Request):
         "channels":    channels,
         "recent":      recent,
         "ai_keys":     ai_keys,
-        "base_url":    _base_url(),
-        "pro_price":   "$9/mo",
-        "stripe_enabled": bool(settings.STRIPE_SECRET_KEY),
+        "base_url": _base_url(),
     })
 
 
@@ -275,75 +270,3 @@ async def dashboard_remove_ai_key(
     return _redirect("/dashboard?tab=settings&removed=1")
 
 
-# ── Stripe ────────────────────────────────────────────────────────────────────
-
-@router.post("/dashboard/billing/checkout")
-async def billing_checkout(request: Request):
-    user = await _get_dashboard_user(request)
-    if not user:
-        return _redirect("/auth/login")
-    if not settings.STRIPE_SECRET_KEY:
-        return _redirect("/dashboard?tab=billing&error=Billing+not+configured")
-
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-    try:
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            line_items=[{"price": settings.STRIPE_PRICE_ID, "quantity": 1}],
-            customer_email=user.get("email") or None,
-            client_reference_id=user["id"],
-            success_url=f"{_base_url()}/dashboard?tab=billing&upgraded=1",
-            cancel_url=f"{_base_url()}/dashboard?tab=billing",
-        )
-        return RedirectResponse(url=session.url, status_code=303)
-    except Exception as e:
-        logger.error(f"Stripe checkout failed: {e}")
-        return _redirect("/dashboard?tab=billing&error=Checkout+failed.+Try+again.")
-
-
-@router.post("/stripe/webhook")
-async def stripe_webhook(request: Request):
-    if not settings.STRIPE_SECRET_KEY:
-        return {"ok": False}
-
-    payload    = await request.body()
-    sig_header = request.headers.get("Stripe-Signature", "")
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
-    except (ValueError, stripe.error.SignatureVerificationError) as e:
-        logger.warning(f"Stripe webhook invalid: {e}")
-        return {"ok": False}
-
-    ev_type = event["type"]
-    data    = event["data"]["object"]
-
-    if ev_type == "checkout.session.completed":
-        user_id     = data.get("client_reference_id")
-        customer_id = data.get("customer")
-        sub_id      = data.get("subscription")
-        if user_id:
-            await set_pro_status(
-                user_id,
-                is_pro=True,
-                stripe_customer_id=customer_id,
-                stripe_subscription_id=sub_id,
-            )
-
-    elif ev_type in ("customer.subscription.deleted", "customer.subscription.paused"):
-        customer_id = data.get("customer")
-        user        = await get_user_by_stripe_customer(customer_id)
-        if user:
-            await set_pro_status(user["id"], is_pro=False)
-
-    elif ev_type == "customer.subscription.updated":
-        customer_id = data.get("customer")
-        status      = data.get("status")
-        user        = await get_user_by_stripe_customer(customer_id)
-        if user:
-            await set_pro_status(user["id"], is_pro=(status == "active"))
-
-    return {"ok": True}

@@ -938,15 +938,7 @@
                     <li>90-day ping history</li>
                     <li>Priority support</li>
                 </ul>
-                {% if stripe_enabled %}
-                <form method="POST" action="/dashboard/billing/checkout">
-                    <button type="submit" class="btn-upgrade">
-                        ⚡ Upgrade to Pro &rarr;
-                    </button>
-                </form>
-                {% else %}
-                <p style="font-size:0.85rem;color:var(--text-muted);">Billing not yet configured. Check back soon.</p>
-                {% endif %}
+                <p style="font-size:0.85rem;color:var(--text-muted);">Paid plans coming soon. <a href="mailto:hello@pinghook.dev" style="color:var(--accent-light);text-decoration:none;">Get in touch</a> to join the early access list.</p>
             </div>
 
             <div class="section">

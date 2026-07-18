@@ -12,9 +12,6 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-in-production"
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_PRICE_ID: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True)
 
